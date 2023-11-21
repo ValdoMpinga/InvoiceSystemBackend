@@ -3,56 +3,36 @@
 const express = require("express");
 const router = express.Router();
 const easyinvoice = require('easyinvoice');
-const fs = require('fs').promises;
+const fs = require('fs');
 
-const data = {
-    documentTitle: 'Invoice',
-    currency: 'USD',
-    taxNotation: 'vat', // or gst
-    marginTop: 25,
-    marginRight: 25,
-    marginLeft: 25,
-    marginBottom: 25,
-    // logo: 'path/to/your/logo', 
-    sender: {
-        company: 'Your Company',
-        address: '123 Street',
-        zip: '12345',
-        city: 'City',
-        country: 'Country',
-    },
-    client: {
-        company: 'Client Company',
-        address: '456 Street',
-        zip: '54321',
-        city: 'City',
-        country: 'Country',
-    },
-    invoiceNumber: '2021001',
-    invoiceDate: '01/01/2022',
-    products: [
-        { description: 'Product 1', quantity: 2, price: 10 },
-        { description: 'Product 2', quantity: 1, price: 20 },
-    ],
-    bottomNotice: 'Thank you for your business!',
-};
-
+const supabase = require('../database/supabase'); // adjust the path based on your project structure
+const invoiceDataFormatter = require('../util/invoiceDataFormatter');
 
 router.post('/create', async (req, res) =>
 {
-    const { a, b } = req.body;
+    try
+    {
+        const { customer_id, products, is_payed } = req.body;
 
-    console.log(a);
+        let invoiceData = invoiceDataFormatter();
+        // console.log(invoiceData);
+        const result = await easyinvoice.createInvoice(invoiceData);
 
-    const result = await easyinvoice.createInvoice(data);
+        // Save the PDF file in binary format
+        const pdfFilePath = './invoice.pdf';
+        const pdfBuffer = Buffer.from(result.pdf, 'base64');
+        await fs.promises.writeFile(pdfFilePath, pdfBuffer);
+        console.log('Invoice PDF saved at:', pdfFilePath);
 
-    // Save the PDF file in binary format
-    const pdfFilePath = './invoice.pdf';
-    const pdfBuffer = Buffer.from(result.pdf, 'base64');
-    await fs.writeFile(pdfFilePath, pdfBuffer);
-    console.log('Invoice PDF saved at:', pdfFilePath);
+        return res.status(200).json({ message: 'Invoice created.' });
+    }catch (error)
+    {
+        console.error('Error creating invoice:', error.message);
+        console.error('Stack trace:', error.stack);
 
-    return res.status(200).json({ message: 'Invoice created.' });
+        return res.status(500).json({ message: 'Internal server error', error: error.message, stack: error.stack });
+    }
+
 });
 
-module.exports = router
+module.exports = router;
