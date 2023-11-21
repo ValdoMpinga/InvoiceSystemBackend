@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const currentDate = new Date();
 
-module.exports = function invoiceDataFormatter()
+module.exports = function invoiceDataFormatter(products,customerData )
 {
     const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
     const formattedDate = currentDate.toLocaleDateString('en-GB', options);
@@ -11,8 +11,6 @@ module.exports = function invoiceDataFormatter()
 
     return  data = {
         documentTitle: 'You Eat Ltd.',
-        currency: 'EUR',
-        taxNotation: 'vat',
         // marginTop: 25,
         // marginRight: 25,
         // marginLeft: 25,
@@ -30,18 +28,9 @@ module.exports = function invoiceDataFormatter()
             city: 'Viana Do Castelo',
             country: 'Portugal',
         },
-        client: {
-            name: "John Doe",
-            email: 'email',
-            phone: '9111111',
-            zip: '12345',
-            city: 'Viana Do Castelo',
-            country: 'Portugal',
-        },
-        products: [
-            { description: 'Product 1', quantity: 2, price: 10 },
-            { description: 'Product 2', quantity: 1, price: 20 },
-        ],
+        settings: { locale: 'de-DE', currency: 'EUR' },
+        client: customerData,
+        products: products,
         "bottom-notice": 'See you soon!',
     };
 

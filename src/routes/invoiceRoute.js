@@ -30,6 +30,7 @@ router.post('/create', async (req, res) =>
                     description: data[0].name,
                     quantity: product.product_quantity,
                     price: data[0].unit_price,
+                    "tax-rate": 17
                 };
                 invoiceProducts.push(productData);
             }
@@ -39,19 +40,22 @@ router.post('/create', async (req, res) =>
         await Promise.all(productPromises);
 
         const { data, error } = await customerQueries.getCustomerById(customer_id);
-        
 
-        console.log(data);
+        let customerData = data[0]
+        delete customerData.id
+        delete customerData.created_at
+
+        // console.log(customerData);
 
         // Continue with the rest of your code...
-        // let invoiceData = invoiceDataFormatter();
-        // const result = await easyinvoice.createInvoice(invoiceData);
+        let invoiceData = invoiceDataFormatter(invoiceProducts,customerData);
+        const result = await easyinvoice.createInvoice(invoiceData);
 
         // Save the PDF file in binary format
-        // const pdfFilePath = './invoice.pdf';
-        // const pdfBuffer = Buffer.from(result.pdf, 'base64');
-        // await fs.promises.writeFile(pdfFilePath, pdfBuffer);
-        // console.log('Invoice PDF saved at:', pdfFilePath);
+        const pdfFilePath = './invoice.pdf';
+        const pdfBuffer = Buffer.from(result.pdf, 'base64');
+        await fs.promises.writeFile(pdfFilePath, pdfBuffer);
+        console.log('Invoice PDF saved at:', pdfFilePath);
 
         return res.status(200).json({ message: 'Invoice created.' });
     } catch (error)
