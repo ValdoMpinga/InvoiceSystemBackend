@@ -48,7 +48,7 @@ router.post('/create', async (req, res) =>
         // console.log(customerData);
 
         // Continue with the rest of your code...
-        let invoiceData = invoiceDataFormatter(invoiceProducts,customerData);
+        let invoiceData = await invoiceDataFormatter(invoiceProducts, customerData,true);
         const result = await easyinvoice.createInvoice(invoiceData);
 
         // Save the PDF file in binary format
