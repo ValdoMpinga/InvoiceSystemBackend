@@ -9,7 +9,6 @@ const getAllProducts = async () =>
 const getProductById = async (productId) =>
 {
     const { data } = await supabase.from('Product').select('*').eq('id', productId);
-    console.log(data);
     return data[0];
 };
 

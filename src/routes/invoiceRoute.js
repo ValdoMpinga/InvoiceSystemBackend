@@ -2,26 +2,28 @@
 
 const express = require("express");
 const router = express.Router();
-const easyinvoice = require('easyinvoice');
-const fs = require('fs/promises');
 
-const invoiceDataFormatter = require('../util/invoice/invoiceDataFormatter');
 const invoiceLineQueries = require('../database/invoiceLineQueries');
 const invoiceQueries = require('../database/invoiceQueries');
 const productQueries = require('../database/productQueries');
 const customerQueries = require('../database/customerQueries');
 const { STATUS_ID } = require('../util/constants');
-const { invoiceTotal } = require('../util/invoice/invoiceTotal');
+
+const { 
+    saveInvoicePDF,
+    invoiceDataFormatter,
+    invoiceTotal,
+    createAndSaveInvoicePDF,
+} = require('../util/invoice/invoiceHelpers');
 
 router.post('/create', async (req, res) =>
 {
     try
     {
-        const { customer_id, products, is_payed } = req.body;
+        const { customer_id, products } = req.body;
         const invoiceProducts = await Promise.all(products.map(async (product) =>
         {
             const data = await productQueries.getProductById(product.product_id);
-
             if (data)
             {
                 const { name, unit_price } = data;
@@ -35,7 +37,6 @@ router.post('/create', async (req, res) =>
             }
         }));
 
-        console.log(invoiceProducts);
         const { data } = await customerQueries.getCustomerById(customer_id);
         const customerData = { ...data };
         delete customerData.id;
@@ -57,12 +58,7 @@ router.post('/create', async (req, res) =>
         ));
 
         const invoiceData = await invoiceDataFormatter(invoiceProducts, customerData, true);
-        const result = await easyinvoice.createInvoice(invoiceData);
-
-        const pdfFilePath = './invoice.pdf';
-        const pdfBuffer = Buffer.from(result.pdf, 'base64');
-        await fs.writeFile(pdfFilePath, pdfBuffer);
-        console.log('Invoice PDF saved at:', pdfFilePath);
+        await createAndSaveInvoicePDF(invoiceData, true);
 
         return res.status(200).json({ message: 'Invoice created.' });
     } catch (error)
@@ -78,30 +74,25 @@ router.post('/get', async (req, res) =>
     try
     {
         const { invoice_id } = req.body;
+        let products = [];
+        let invoiceCustomerData;
+        let customer;
+        let product;
 
-        let products = []
-        let invoiceCustomerData
-        let customer
-        let product
+        let invoice = await invoiceQueries.getInvoiceById(invoice_id);
+        let invoiceLines = await invoiceLineQueries.getInvoiceLineById(invoice_id);
 
-        let invoice = await invoiceQueries.getInvoiceById(invoice_id)
-
-        let invoiceLines = await invoiceLineQueries.getInvoiceLineById(invoice_id)
-
-        
         for (const [index, line] of invoiceLines.entries())
         {
-            customer = await customerQueries.getCustomerById(invoice.customer_id)
-            product = await productQueries.getProductById(line.product_id)
-
-
+            customer = await customerQueries.getCustomerById(invoice.customer_id);
+            product = await productQueries.getProductById(line.product_id);
 
             products.push({
                 "description": product.name,
                 "quantity": line.quantity,
                 "price": line.unit_price,
                 'tax-rate': 17
-            })
+            });
         }
 
         invoiceCustomerData = {
@@ -112,25 +103,19 @@ router.post('/get', async (req, res) =>
             zip: customer[0].zip,
             city: customer[0].city,
             country: customer[0].country
-        }
+        };
 
         const invoiceData = await invoiceDataFormatter(products, invoiceCustomerData, false);
-
-        const result = await easyinvoice.createInvoice(invoiceData);
-
-        const pdfFilePath = './invoice.pdf';
-        const pdfBuffer = Buffer.from(result.pdf, 'base64');
-        await fs.writeFile(pdfFilePath, pdfBuffer);
-        console.log('Invoice PDF saved at:', pdfFilePath);
-
+        await createAndSaveInvoicePDF(invoiceData, false);
 
         return res.status(200).json({ message: 'Invoice fetched.' });
-    } catch (e)
+    } catch (error)
     {
-        console.log(e);
+        console.error('Error fetching invoice:', error.message);
+        console.error('Stack trace:', error.stack);
         return res.status(500).json({ message: 'Internal server error', error: error.message, stack: error.stack });
-
     }
+});
 
-})
+
 module.exports = router;

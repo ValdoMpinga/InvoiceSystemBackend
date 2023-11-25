@@ -9,7 +9,7 @@ const getAllCustomers = async () =>
 const getCustomerById = async (customerId) =>
 {
     const { data } = await supabase.from('Customer').select('*').eq('id', customerId);
-    console.log(data);
+
     return data
 };
 
@@ -23,5 +23,4 @@ module.exports = {
     getAllCustomers,
     getCustomerById,
     createCustomer,
-    // Add other customer-related queries here if needed
 };

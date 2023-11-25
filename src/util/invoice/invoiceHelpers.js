@@ -1,8 +1,43 @@
+// invoiceHelpers.js
+const easyinvoice = require('easyinvoice');
 const fs = require('fs');
 const path = require('path');
 const currentDate = new Date();
 
-module.exports = function invoiceDataFormatter(products, customerData, isDraft)
+function saveInvoicePDF(pdfData)
+{
+    const pdfFilePath = './invoice/invoice.pdf';
+    const pdfBuffer = Buffer.from(pdfData, 'base64');
+    fs.writeFileSync(pdfFilePath, pdfBuffer);
+    console.log('Invoice PDF saved at:', pdfFilePath);
+}
+
+async function createAndSaveInvoicePDF(invoiceData, isPayed)
+{
+    const result = await easyinvoice.createInvoice(invoiceData);
+    saveInvoicePDF(result.pdf);
+}
+
+
+function invoiceTotal(products)
+{
+    if (!Array.isArray(products))
+    {
+        throw new Error('Input must be an array of products');
+    }
+    console.log(products);
+
+    // Calculate the total amount by summing the product of quantity and price for each item
+    const totalAmount = products.reduce((total, product) =>
+    {
+        const itemTotal = product.quantity * product.price;
+        return total + itemTotal;
+    }, 0);
+
+    return totalAmount;
+}
+
+function invoiceDataFormatter(products, customerData, isDraft)
 {
     const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
     const formattedDate = currentDate.toLocaleDateString('en-GB', options);
@@ -41,4 +76,11 @@ module.exports = function invoiceDataFormatter(products, customerData, isDraft)
         products: products,
         "bottom-notice": 'See you soon!',
     });
+};
+
+module.exports = {
+    saveInvoicePDF,
+    createAndSaveInvoicePDF,
+    invoiceTotal,
+    invoiceDataFormatter
 };
