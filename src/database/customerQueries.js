@@ -8,8 +8,9 @@ const getAllCustomers = async () =>
 
 const getCustomerById = async (customerId) =>
 {
-    const { data, error } = await supabase.from('Customer').select('*').eq('id', customerId);
-    return { data, error };
+    const { data } = await supabase.from('Customer').select('*').eq('id', customerId);
+    console.log(data);
+    return data
 };
 
 const createCustomer = async (customerData) =>

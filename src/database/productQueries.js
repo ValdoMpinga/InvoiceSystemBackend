@@ -8,8 +8,9 @@ const getAllProducts = async () =>
 
 const getProductById = async (productId) =>
 {
-    const { data, error } = await supabase.from('Product').select('*').eq('id', productId);
-    return { data, error };
+    const { data } = await supabase.from('Product').select('*').eq('id', productId);
+    console.log(data);
+    return data[0];
 };
 
 const createProduct = async (productData) =>
@@ -22,5 +23,4 @@ module.exports = {
     getAllProducts,
     getProductById,
     createProduct,
-    // Add other product-related queries here if needed
 };

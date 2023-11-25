@@ -3,58 +3,65 @@
 const express = require("express");
 const router = express.Router();
 const easyinvoice = require('easyinvoice');
-const fs = require('fs');
+const fs = require('fs/promises');
 
-const invoiceDataFormatter = require('../util/invoiceDataFormatter');
-
+const invoiceDataFormatter = require('../util/invoice/invoiceDataFormatter');
 const invoiceLineQueries = require('../database/invoiceLineQueries');
 const invoiceQueries = require('../database/invoiceQueries');
 const productQueries = require('../database/productQueries');
 const customerQueries = require('../database/customerQueries');
+const { STATUS_ID } = require('../util/constants');
+const { invoiceTotal } = require('../util/invoice/invoiceTotal');
 
 router.post('/create', async (req, res) =>
 {
     try
     {
         const { customer_id, products, is_payed } = req.body;
-        let invoiceProducts = [];
-
-        // Use map to create an array of promises
-        const productPromises = products.map(async (product) =>
+        const invoiceProducts = await Promise.all(products.map(async (product) =>
         {
-            const { data, error } = await productQueries.getProductById(product.product_id);
+            const data = await productQueries.getProductById(product.product_id);
 
-            if (data && data.length > 0)
+            if (data)
             {
-                const productData = {
-                    description: data[0].name,
+                const { name, unit_price } = data;
+                return {
+                    product_id: product.product_id,
+                    description: name,
                     quantity: product.product_quantity,
-                    price: data[0].unit_price,
+                    price: unit_price,
                     "tax-rate": 17
                 };
-                invoiceProducts.push(productData);
             }
+        }));
+
+        console.log(invoiceProducts);
+        const { data } = await customerQueries.getCustomerById(customer_id);
+        const customerData = { ...data };
+        delete customerData.id;
+        delete customerData.created_at;
+
+        const insertedInvoiceId = await invoiceQueries.createInvoice({
+            customer_id,
+            status_id: STATUS_ID.PAID,
+            total_amount: invoiceTotal(invoiceProducts)
         });
 
-        // Use Promise.all to wait for all promises to resolve
-        await Promise.all(productPromises);
+        await Promise.all(invoiceProducts.map((product) =>
+            invoiceLineQueries.createInvoiceLine({
+                quantity: product.quantity,
+                unit_price: product.price,
+                invoice_id: insertedInvoiceId,
+                product_id: product.product_id
+            })
+        ));
 
-        const { data, error } = await customerQueries.getCustomerById(customer_id);
-
-        let customerData = data[0]
-        delete customerData.id
-        delete customerData.created_at
-
-        // console.log(customerData);
-
-        // Continue with the rest of your code...
-        let invoiceData = await invoiceDataFormatter(invoiceProducts, customerData,true);
+        const invoiceData = await invoiceDataFormatter(invoiceProducts, customerData, true);
         const result = await easyinvoice.createInvoice(invoiceData);
 
-        // Save the PDF file in binary format
         const pdfFilePath = './invoice.pdf';
         const pdfBuffer = Buffer.from(result.pdf, 'base64');
-        await fs.promises.writeFile(pdfFilePath, pdfBuffer);
+        await fs.writeFile(pdfFilePath, pdfBuffer);
         console.log('Invoice PDF saved at:', pdfFilePath);
 
         return res.status(200).json({ message: 'Invoice created.' });
@@ -62,9 +69,68 @@ router.post('/create', async (req, res) =>
     {
         console.error('Error creating invoice:', error.message);
         console.error('Stack trace:', error.stack);
-
         return res.status(500).json({ message: 'Internal server error', error: error.message, stack: error.stack });
     }
 });
 
+router.post('/get', async (req, res) =>
+{
+    try
+    {
+        const { invoice_id } = req.body;
+
+        let products = []
+        let invoiceCustomerData
+        let customer
+        let product
+
+        let invoice = await invoiceQueries.getInvoiceById(invoice_id)
+
+        let invoiceLines = await invoiceLineQueries.getInvoiceLineById(invoice_id)
+
+        
+        for (const [index, line] of invoiceLines.entries())
+        {
+            customer = await customerQueries.getCustomerById(invoice.customer_id)
+            product = await productQueries.getProductById(line.product_id)
+
+
+
+            products.push({
+                "description": product.name,
+                "quantity": line.quantity,
+                "price": line.unit_price,
+                'tax-rate': 17
+            })
+        }
+
+        invoiceCustomerData = {
+            name: customer.name,
+            email: customer[0].email,
+            phone: customer[0].email,
+            address: customer[0].address,
+            zip: customer[0].zip,
+            city: customer[0].city,
+            country: customer[0].country
+        }
+
+        const invoiceData = await invoiceDataFormatter(products, invoiceCustomerData, false);
+
+        const result = await easyinvoice.createInvoice(invoiceData);
+
+        const pdfFilePath = './invoice.pdf';
+        const pdfBuffer = Buffer.from(result.pdf, 'base64');
+        await fs.writeFile(pdfFilePath, pdfBuffer);
+        console.log('Invoice PDF saved at:', pdfFilePath);
+
+
+        return res.status(200).json({ message: 'Invoice fetched.' });
+    } catch (e)
+    {
+        console.log(e);
+        return res.status(500).json({ message: 'Internal server error', error: error.message, stack: error.stack });
+
+    }
+
+})
 module.exports = router;

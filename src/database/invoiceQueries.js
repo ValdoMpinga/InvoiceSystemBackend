@@ -2,21 +2,34 @@ const supabase = require('./supabase');
 
 const getAllInvoices = async () =>
 {
-    const { data, error } = await supabase.from('invoices').select('*');
+    const { data, error } = await supabase.from('Invoice').select('*');
     return { data, error };
 };
 
 const getInvoiceById = async (invoiceId) =>
 {
-    const { data, error } = await supabase.from('invoices').select('*').eq('id', invoiceId);
-    return { data, error };
+    const { data, error } = await supabase.from('Invoice').select('*').eq('id', invoiceId);
+
+    return data[0];
 };
 
 const createInvoice = async (invoiceData) =>
 {
-    const { data, error } = await supabase.from('invoices').insert([invoiceData]);
-    return { data, error };
+    try
+    {
+        const { data, error } = await supabase.from('Invoice').insert([invoiceData]).select();
+
+        return data[0].id
+    } catch (error)
+    {
+        console.error(error);
+        return error
+    }
 };
+
+
+
+
 
 module.exports = {
     getAllInvoices,

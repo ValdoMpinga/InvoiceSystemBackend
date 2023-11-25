@@ -7,7 +7,7 @@ module.exports = function invoiceDataFormatter(products, customerData, isDraft)
     const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
     const formattedDate = currentDate.toLocaleDateString('en-GB', options);
 
-    const logoBuffer = fs.readFileSync(path.join(__dirname, '../assets/images/logo.png'));
+    const logoBuffer = fs.readFileSync(path.join(__dirname, '../../assets/images/logo.png'));
     const logoBase64 = logoBuffer.toString('base64');
 
     // Path to the locally saved watermark image
@@ -16,11 +16,10 @@ module.exports = function invoiceDataFormatter(products, customerData, isDraft)
 
     if (isDraft)
     {
-        watermarkBuffer = fs.readFileSync(path.join(__dirname, '../assets/images/watermark-draft.jpg'))
+        watermarkBuffer = fs.readFileSync(path.join(__dirname, '../../assets/images/watermark-draft.jpg'))
         watermarkBase64 = watermarkBuffer.toString('base64')
     } else watermarkBase64 = null
 
-        console.log(watermarkBase64);
     return (data = {
         documentTitle: 'You Eat Ltd.',
         images: {
