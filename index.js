@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 
 app.use(bodyParser.json());
 
-app.listen(process.env.PORT, 'localhost', () => console.log(`server is 🚀`));
+app.listen(process.env.PORT, '0.0.0.0', () => console.log(`server is 🚀`));
 
 
 app.use('/invoice', invoiceRouter)
