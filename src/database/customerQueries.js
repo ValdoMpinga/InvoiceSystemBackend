@@ -19,6 +19,7 @@ const createCustomer = async (customerData) =>
     return { data, error };
 };
 
+
 module.exports = {
     getAllCustomers,
     getCustomerById,
