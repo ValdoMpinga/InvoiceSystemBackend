@@ -37,7 +37,7 @@ router.post('/create', async (req, res) =>
             }
         }));
 
-        const { data } = await customerQueries.getCustomerById(customer_id);
+        const { data } = await customerQueries.getCustomerByEmail(customer_id);
         const customerData = { ...data };
         delete customerData.id;
         delete customerData.created_at;
@@ -84,7 +84,7 @@ router.post('/get', async (req, res) =>
 
         for (const [index, line] of invoiceLines.entries())
         {
-            customer = await customerQueries.getCustomerById(invoice.customer_id);
+            customer = await customerQueries.getCustomerByEmail(invoice.customer_email);
             product = await productQueries.getProductById(line.product_id);
 
             products.push({

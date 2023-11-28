@@ -6,9 +6,9 @@ const getAllCustomers = async () =>
     return { data, error };
 };
 
-const getCustomerById = async (customerId) =>
+const getCustomerByEmail = async (customerEmail) =>
 {
-    const { data } = await supabase.from('Customer').select('*').eq('id', customerId);
+    const { data } = await supabase.from('Customer').select('*').eq('email', customerEmail);
 
     return data
 };
@@ -22,6 +22,6 @@ const createCustomer = async (customerData) =>
 
 module.exports = {
     getAllCustomers,
-    getCustomerById,
+    getCustomerByEmail,
     createCustomer,
 };
