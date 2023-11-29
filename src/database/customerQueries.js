@@ -10,7 +10,14 @@ const getCustomerByEmail = async (customerEmail) =>
 {
     const { data } = await supabase.from('Customer').select('*').eq('email', customerEmail);
 
-    return data
+    return data[0]
+};
+
+const getCustomerById = async (customerId) =>
+{
+    const { data } = await supabase.from('Customer').select('*').eq('id', customerId);
+
+    return data[0]
 };
 
 const createCustomer = async (customerData) =>
@@ -24,4 +31,5 @@ module.exports = {
     getAllCustomers,
     getCustomerByEmail,
     createCustomer,
+    getCustomerById
 };

@@ -4,18 +4,18 @@ const fs = require('fs');
 const path = require('path');
 const currentDate = new Date();
 
-function saveInvoicePDF(pdfData)
+function saveInvoicePDF(pdfData, filePath)
 {
-    const pdfFilePath = './invoice/invoice.pdf';
+    
     const pdfBuffer = Buffer.from(pdfData, 'base64');
-    fs.writeFileSync(pdfFilePath, pdfBuffer);
-    console.log('Invoice PDF saved at:', pdfFilePath);
+    fs.writeFileSync(filePath, pdfBuffer);
+    console.log('Invoice PDF saved at:', filePath);
 }
 
-async function createAndSaveInvoicePDF(invoiceData, isPayed)
+async function createAndSaveInvoicePDF(invoiceData, filePath)
 {
     const result = await easyinvoice.createInvoice(invoiceData);
-    saveInvoicePDF(result.pdf);
+    saveInvoicePDF(result.pdf, filePath);
 }
 
 
@@ -25,7 +25,6 @@ function invoiceTotal(products)
     {
         throw new Error('Input must be an array of products');
     }
-    console.log(products);
 
     // Calculate the total amount by summing the product of quantity and price for each item
     const totalAmount = products.reduce((total, product) =>
@@ -45,6 +44,16 @@ function invoiceDataFormatter(products, customerData, isDraft)
     const logoBuffer = fs.readFileSync(path.join(__dirname, '../../assets/images/logo.png'));
     const logoBase64 = logoBuffer.toString('base64');
 
+    let organizedCustomerData = {
+        company: customerData.name,
+        address: customerData.address,
+        zip: customerData.zip,
+        city: customerData.city,
+        country: customerData.country,
+        name: customerData.name,
+        email: customerData.email,
+        phone: customerData.phone,
+    }
     // Path to the locally saved watermark image
     let watermarkBase64
     let watermarkBuffer
@@ -55,7 +64,7 @@ function invoiceDataFormatter(products, customerData, isDraft)
         watermarkBase64 = watermarkBuffer.toString('base64')
     } else watermarkBase64 = null
 
-    return (data = {
+    let invoiceData = {
         documentTitle: 'You Eat Ltd.',
         images: {
             logo: logoBase64,
@@ -72,10 +81,13 @@ function invoiceDataFormatter(products, customerData, isDraft)
             country: 'Portugal',
         },
         settings: { locale: 'de-DE', currency: 'EUR' },
-        client: customerData,
+        client: organizedCustomerData,
         products: products,
         "bottom-notice": 'See you soon!',
-    });
+    };
+
+    console.log(invoiceData);
+    return invoiceData
 };
 
 module.exports = {

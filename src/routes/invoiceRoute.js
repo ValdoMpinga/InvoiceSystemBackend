@@ -2,25 +2,27 @@
 
 const express = require("express");
 const router = express.Router();
+const path = require('path');
 
 const invoiceLineQueries = require('../database/invoiceLineQueries');
 const invoiceQueries = require('../database/invoiceQueries');
 const productQueries = require('../database/productQueries');
 const customerQueries = require('../database/customerQueries');
 const { STATUS_ID } = require('../util/constants');
+const fs = require('fs');
 
-const { 
-    saveInvoicePDF,
+const {
     invoiceDataFormatter,
     invoiceTotal,
     createAndSaveInvoicePDF,
 } = require('../util/invoice/invoiceHelpers');
+const { log } = require("console");
 
 router.post('/create', async (req, res) =>
 {
     try
     {
-        const { customer_id, products } = req.body;
+        const { customer_email, products } = req.body;
         const invoiceProducts = await Promise.all(products.map(async (product) =>
         {
             const data = await productQueries.getProductById(product.product_id);
@@ -37,13 +39,11 @@ router.post('/create', async (req, res) =>
             }
         }));
 
-        const { data } = await customerQueries.getCustomerByEmail(customer_id);
-        const customerData = { ...data };
-        delete customerData.id;
+        let customerData = await customerQueries.getCustomerByEmail(customer_email);
         delete customerData.created_at;
 
         const insertedInvoiceId = await invoiceQueries.createInvoice({
-            customer_id,
+            customer_id: customerData.id,
             status_id: STATUS_ID.PAID,
             total_amount: invoiceTotal(invoiceProducts)
         });
@@ -57,15 +57,20 @@ router.post('/create', async (req, res) =>
             })
         ));
 
-        const invoiceData = await invoiceDataFormatter(invoiceProducts, customerData, true);
-        await createAndSaveInvoicePDF(invoiceData, true);
+        // const invoiceData = await invoiceDataFormatter(invoiceProducts, customerData, false);
+        // await createAndSaveInvoicePDF(invoiceData, false);
 
         return res.status(200).json({ message: 'Invoice created.' });
+
     } catch (error)
     {
-        console.error('Error creating invoice:', error.message);
+        console.error('Error retrieving invoice:', error.message);
         console.error('Stack trace:', error.stack);
-        return res.status(500).json({ message: 'Internal server error', error: error.message, stack: error.stack });
+        res.status(500).json({
+            message: 'Internal server error',
+            error: error.message,
+            stack: error.stack
+        });
     }
 });
 
@@ -79,12 +84,15 @@ router.post('/get', async (req, res) =>
         let customer;
         let product;
 
+    
         let invoice = await invoiceQueries.getInvoiceById(invoice_id);
         let invoiceLines = await invoiceLineQueries.getInvoiceLineById(invoice_id);
+        // console.log(invoiceLines);
 
         for (const [index, line] of invoiceLines.entries())
         {
-            customer = await customerQueries.getCustomerByEmail(invoice.customer_email);
+
+            customer = await customerQueries.getCustomerById(invoice.customer_id);
             product = await productQueries.getProductById(line.product_id);
 
             products.push({
@@ -95,20 +103,42 @@ router.post('/get', async (req, res) =>
             });
         }
 
+        console.log(customer);
         invoiceCustomerData = {
-            name: customer.name,
-            email: customer[0].email,
-            phone: customer[0].email,
-            address: customer[0].address,
-            zip: customer[0].zip,
-            city: customer[0].city,
-            country: customer[0].country
+            company: customer.name,
+            address: customer.address,
+            zip: customer.zip,
+            country: customer.country,
+            email: customer.email,
+            phone: customer.phone,
+            city: customer.city,
         };
 
-        const invoiceData = await invoiceDataFormatter(products, invoiceCustomerData, false);
-        await createAndSaveInvoicePDF(invoiceData, false);
+        let filePath = path.join(__dirname, `../../invoice/${customer.email}_invoice.pdf`); 
 
-        return res.status(200).json({ message: 'Invoice fetched.' });
+        const invoiceData = await invoiceDataFormatter(products, invoiceCustomerData, false);
+        await createAndSaveInvoicePDF(invoiceData, filePath);
+
+
+        // Read the file into a buffer
+        const fileBuffer = fs.readFileSync(filePath);
+
+        // Convert the buffer to a base64 string
+        const base64String = fileBuffer.toString('base64');
+
+        // Send the base64 string in the response
+        res.send(base64String);
+
+        fs.unlink(filePath, (err) =>
+        {
+            if (err)
+            {
+                console.error(`Error deleting file: ${err.message}`);
+            } else
+            {
+                console.log('File deleted successfully');
+            }
+        });
     } catch (error)
     {
         console.error('Error fetching invoice:', error.message);
