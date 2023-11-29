@@ -6,7 +6,7 @@ const currentDate = new Date();
 
 function saveInvoicePDF(pdfData, filePath)
 {
-    
+
     const pdfBuffer = Buffer.from(pdfData, 'base64');
     fs.writeFileSync(filePath, pdfBuffer);
     console.log('Invoice PDF saved at:', filePath);
@@ -90,9 +90,24 @@ function invoiceDataFormatter(products, customerData, isDraft)
     return invoiceData
 };
 
+function invoicePdfDeleter(filePath){
+    fs.unlink(filePath, (err) =>
+    {
+        if (err)
+        {
+            console.error(`Error deleting file: ${err.message}`);
+        } else
+        {
+            console.log('File deleted successfully');
+        }
+    });
+}
+
+
 module.exports = {
     saveInvoicePDF,
     createAndSaveInvoicePDF,
     invoiceTotal,
-    invoiceDataFormatter
+    invoiceDataFormatter,
+    invoicePdfDeleter,
 };
