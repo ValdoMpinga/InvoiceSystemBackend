@@ -19,4 +19,31 @@ router.get('/get', async (req, res) =>
     }
 })
 
+router.post('/get-by-id', async (req, res) =>
+{
+    try
+    {
+        const { customer_id } = req.body;
+
+        let customer = await customerQueries.getCustomerById(customer_id)
+
+        console.log("retrieving single customer by id");
+
+        return res.status(200).json({ customer });
+    } catch (e)
+    {
+        console.log(e);
+        return res.status(500).json({ message: 'Internal server error', error: error.message, stack: error.stack });
+    }
+})
+
+router.get('/get-customers-count', async (req, res) =>
+{ 
+    let customerCount = await customerQueries.getNumberOfCustomers()
+
+    return res.status(200).json({ "count": customerCount });
+})
+
+
+
 module.exports = router;

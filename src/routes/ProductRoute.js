@@ -23,4 +23,28 @@ router.get('/get', async (req, res) =>
     }
 })
 
+
+router.get('/get-products-count', async (req, res) =>
+{
+    let productsCount = await productQueries.getProductsCount()
+
+    return res.status(200).json({ "count": productsCount });
+})
+
+
+router.post('/create', async (req, res) =>
+{ 
+    let { name, description, unit_price, url, postProductObject } = req.body
+    
+
+    productQueries.createProduct({
+        name: name,
+        description: description,
+        unit_price: unit_price,
+        url: url
+    })
+
+    return res.status(200).json({ "response": "ok" });
+
+})
 module.exports = router;

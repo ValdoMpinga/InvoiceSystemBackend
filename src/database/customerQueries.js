@@ -6,6 +6,13 @@ const getAllCustomers = async () =>
     return { data, error };
 };
 
+const getNumberOfCustomers = async () =>
+{
+    const {  count } = await supabase.from('Customer').select('*', { count: 'exact', head: true });
+
+    return count;
+};
+
 const getCustomerByEmail = async (customerEmail) =>
 {
     const { data } = await supabase.from('Customer').select('*').eq('email', customerEmail);
@@ -15,8 +22,9 @@ const getCustomerByEmail = async (customerEmail) =>
 
 const getCustomerById = async (customerId) =>
 {
-    const { data } = await supabase.from('Customer').select('*').eq('id', customerId);
+    console.log("in getCustomerById");
 
+    const { data } = await supabase.from('Customer').select('*').eq('id', customerId);
     return data[0]
 };
 
@@ -31,5 +39,6 @@ module.exports = {
     getAllCustomers,
     getCustomerByEmail,
     createCustomer,
-    getCustomerById
+    getCustomerById,
+    getNumberOfCustomers
 };

@@ -18,7 +18,6 @@ const {
     createAndSaveInvoicePDF,
     invoicePdfDeleter
 } = require('../util/invoice/invoiceHelpers');
-const { log } = require("console");
 
 router.post('/create', async (req, res) =>
 {
@@ -102,7 +101,6 @@ router.post('/get', async (req, res) =>
 
         let invoice = await invoiceQueries.getInvoiceById(invoice_id);
         let invoiceLines = await invoiceLineQueries.getInvoiceLineById(invoice_id);
-        // console.log(invoiceLines);
 
         for (const [index, line] of invoiceLines.entries())
         {
@@ -118,7 +116,14 @@ router.post('/get', async (req, res) =>
             });
         }
 
-        console.log(customer);
+        const parsed_date = new Date(invoice.emission_data);
+
+        // Format the date
+        const formatted_date = `${parsed_date.getUTCDate().toString().padStart(2, '0')}/${(parsed_date.getUTCMonth() + 1).toString().padStart(2, '0')}/${parsed_date.getUTCFullYear()}`;
+
+        console.log(`Original Date: ${invoice.emission_data}`);
+        console.log(`Formatted Date: ${formatted_date}`);
+
         invoiceCustomerData = {
             company: customer.name,
             address: customer.address,
@@ -127,6 +132,7 @@ router.post('/get', async (req, res) =>
             email: customer.email,
             phone: customer.phone,
             city: customer.city,
+            emission_date: formatted_date
         };
 
         let filePath = path.join(__dirname, `../../invoice/${customer.email}_invoice.pdf`);
@@ -155,5 +161,40 @@ router.post('/get', async (req, res) =>
 });
 
 
+router.get('/get-invoice-list', async (req, res) =>
+{
+    try
+    {
+        const invoices = await invoiceQueries.getAllInvoices();
 
+        res.status(200).json({ invoices });
+    } catch (error)
+    {
+        console.error('Error retrieving invoices:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+router.post('/get-user-invoice-number', async (req, res) =>
+{
+    try
+    {
+        const { customer_id } = req.body;
+
+        let numberOfInvoices = await invoiceQueries.getNumberOfInvoicesByCustomerId(customer_id)
+
+        res.status(200).json({ "number_of_invoices": numberOfInvoices });
+    } catch (error)
+    {
+        console.error('Error retrieving invoices:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+})
+
+router.get('/get-invoices-count', async (req, res) =>
+{
+    let invoicesCount = await invoiceQueries.getInvoicesCount()
+
+    return res.status(200).json({ "count": invoicesCount });
+})
 module.exports = router;

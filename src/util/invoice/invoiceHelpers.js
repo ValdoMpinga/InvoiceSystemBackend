@@ -2,7 +2,6 @@
 const easyinvoice = require('easyinvoice');
 const fs = require('fs');
 const path = require('path');
-const currentDate = new Date();
 
 function saveInvoicePDF(pdfData, filePath)
 {
@@ -26,7 +25,6 @@ function invoiceTotal(products)
         throw new Error('Input must be an array of products');
     }
 
-    // Calculate the total amount by summing the product of quantity and price for each item
     const totalAmount = products.reduce((total, product) =>
     {
         const itemTotal = product.quantity * product.price;
@@ -38,14 +36,12 @@ function invoiceTotal(products)
 
 function invoiceDataFormatter(products, customerData, isDraft)
 {
-    const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
-    const formattedDate = currentDate.toLocaleDateString('en-GB', options);
 
     const logoBuffer = fs.readFileSync(path.join(__dirname, '../../assets/images/logo.png'));
     const logoBase64 = logoBuffer.toString('base64');
 
     let organizedCustomerData = {
-        company: customerData.name,
+        company: customerData.company,
         address: customerData.address,
         zip: customerData.zip,
         city: customerData.city,
@@ -71,7 +67,7 @@ function invoiceDataFormatter(products, customerData, isDraft)
             background: watermarkBase64, // Add the watermark image
         },
         information: {
-            date: formattedDate,
+            date: customerData.emission_date,
         },
         sender: {
             company: 'Your Eat Ltd',
@@ -86,7 +82,6 @@ function invoiceDataFormatter(products, customerData, isDraft)
         "bottom-notice": 'See you soon!',
     };
 
-    console.log(invoiceData);
     return invoiceData
 };
 
